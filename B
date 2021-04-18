@@ -1,0 +1,113 @@
+// A rabbit is in the top-left-most cell of a M x N grid. The grid width is M-cell and the height is N-cell. 
+// Some cells have snakes and other cells don’t. The rabbit wants to go home,
+// which is located at the bottom-right-most cell of the grid.
+// It can only move rightwards or downwards (no diagonal movement) and do so one cell at a time.
+// The rabbit cannot move to a cell that has snakes.
+// In this program the different paths will be counted with K number of cells have snakes.
+
+#include<iostream>
+#include<utility> // for std::pair
+#include<cassert> // for assert
+
+typedef std::pair<int, int> Position;
+
+// Input
+//     snakes      : the pointer which points to the Position of snakes
+//     num_snakes  : the number of snakes
+//     major_order : min(rows, columns)
+//     minor_order : max(rows, columns)
+// Output
+//     the number of different paths from top-left-most cell to the bottom-right-most cell of the grid
+// Synopsis
+//     The total number of different paths is counted by iterative calculation
+int countAllPathsBySteps(Position* snakes, int num_snakes, int major_order, int minor_order) {
+    int num_paths[major_order];      // store the intermediate result
+    int num_paths_next[major_order]; // store the final result
+    
+    for(int i = 0; i < major_order; i++) { // initialization
+        num_paths[i] = 1;
+        num_paths_next[i] = 1;
+    }
+    
+    for(int i = 0; i < major_order; i++) { // process the first line
+        for(int k = 0; k < num_snakes; k++) {
+            if((snakes[k].first == i) && (snakes[k].second == 0)) {
+				num_paths[i] = 0;
+                break;
+            }
+        }
+    }
+    
+    for(int j = 1; j < minor_order; j++) {
+        for(int k = 0; k < num_snakes; k++) { // if there are snakes in current line set it to 0
+            if(snakes[k].second == j) {
+                num_paths_next[snakes[k].first] = 0;
+            }
+        }
+        
+        if(num_paths_next[0] != 0) {
+            num_paths_next[0] = num_paths[0];
+        }
+        
+        for(int i = 1; i < major_order; i++) { // update the number of path in current line
+            if(num_paths_next[i] != 0) {
+                num_paths_next[i] = num_paths_next[i - 1] + num_paths[i];
+            }
+        }
+        
+        for(int i = 1; i < major_order; i++) { // move the current line to the temporary array
+            num_paths[i] = num_paths_next[i];
+        }
+        
+        if(j < minor_order - 1) { // prepare for the next calculation
+            for(int i = 1; i < major_order; i++) {
+                num_paths_next[i] = 1;
+            }
+        }
+    }
+    
+    std::cout << "number of paths" << ": " << num_paths_next[major_order - 1] << std::endl;
+    return num_paths_next[major_order - 1];
+}
+
+// Input
+//     snakes     : the pointer which points to the Position of snakes
+//     num_snakes : the number of snakes
+//     rows       : the number of rows
+//     columns    : the number of columns
+// Output
+//     the number of different paths from top-left-most cell to the bottom-right-most cell of the grid
+// Synopsis
+//     traverse the matrix to calculate the number of paths according to the min(rows, columns)
+int countAllPaths(Position* snakes, int num_snakes, int rows, int columns) {
+    int major_order = rows;
+    int minor_order = columns;
+    
+    if(rows >= columns) { // for square matrix(rows == columns), traverse by column
+        for(int i = 0; i < num_snakes; i++) {
+            Position tmp;
+            tmp.swap(snakes[i]);
+            snakes[i].first = tmp.second;
+            snakes[i].second = tmp.first;
+        }
+        major_order = columns;
+        minor_order = rows;
+    }
+	
+    return countAllPathsBySteps(snakes, num_snakes, major_order, minor_order);
+}
+
+// This case will cover the 2*3 matrix with 1 snake
+void testNumPathOfRectMatrix() {
+    constexpr int K = 1;
+    Position snakes[K] = { Position(1,1) };
+    constexpr int rows = 2;
+    constexpr int columns = 3;
+    constexpr int result = 1;
+    assert(countAllPaths(snakes, K, rows, columns) == result);
+}
+
+int main() {
+    testNumPathOfRectMatrix();
+    return 0;
+}
