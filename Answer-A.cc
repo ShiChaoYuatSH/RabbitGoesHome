@@ -22,6 +22,10 @@ enum CELLFLAG {
 //     The total number of different paths is counted by the dynamic programming:
 //     dp[i][j] = dp[i-1][j] + dp[i][j-1]
 int countAllPaths(CELLFLAG* grid, int rows, int columns) {
+    assert(((grid != nullptr) && ((rows * columns) != 0)) || ((grid == nullptr) && ((rows * columns) == 0)));
+    assert(grid[0] == FLATLAND);
+    assert(grid[rows * columns - 1] == FLATLAND);
+
     //grid to store the number of paths of every cell
     int num_paths[rows * columns];
     for(int i = 0; i < (rows * columns); i++) {
@@ -50,16 +54,36 @@ int countAllPaths(CELLFLAG* grid, int rows, int columns) {
         }
     }
     
-    return num_paths[rows * (columns - 1) + rows - 1];
+    return num_paths[rows * columns - 1];
 }
 
 // This case will cover the 3*3 matrix with 3 snakes
-void testZeroPath() {
+void testZeroPath1() {
     constexpr int rows = 3;
     constexpr int cols = 3;
     constexpr int result = 0;
 
     CELLFLAG grid[rows][cols] = { {FLATLAND, FLATLAND, SNAKE}, {FLATLAND, SNAKE, FLATLAND}, {SNAKE, FLATLAND, FLATLAND} };
+    assert(countAllPaths(*grid, rows, cols) == result);
+}
+
+// This case will cover the 3*3 matrix with 2 snakes
+void testZeroPath2() {
+    constexpr int rows = 3;
+    constexpr int cols = 3;
+    constexpr int result = 0;
+
+    CELLFLAG grid[rows][cols] = { {FLATLAND, SNAKE, FLATLAND}, {SNAKE, FLATLAND, FLATLAND}, {FLATLAND, FLATLAND, FLATLAND} };
+    assert(countAllPaths(*grid, rows, cols) == result);
+}
+
+// This case will cover the 3*3 matrix with 2 snakes
+void testZeroPath3() {
+    constexpr int rows = 3;
+    constexpr int cols = 3;
+    constexpr int result = 0;
+
+    CELLFLAG grid[rows][cols] = { {FLATLAND, FLATLAND, FLATLAND}, {FLATLAND, FLATLAND, SNAKE}, {FLATLAND, SNAKE, FLATLAND} };
     assert(countAllPaths(*grid, rows, cols) == result);
 }
 
@@ -104,9 +128,11 @@ void testNumPathOfRectMatrix2() {
 }
 
 int main() {
-    testZeroPath(); // 0 path expected
-    testOnePath();  // 1 path expected
-    testFullPath(); // 6 paths expected
+    testZeroPath1(); // 0 path expected
+    testZeroPath2(); // 0 path expected
+    testZeroPath3(); // 0 path expected
+    testOnePath();   // 1 path expected
+    testFullPath();  // 6 paths expected
     testNumPathOfRectMatrix1(); // 1 path expected
     testNumPathOfRectMatrix2(); // 1 path expected
     return 0;
