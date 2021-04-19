@@ -3,9 +3,8 @@
 // which is located at the bottom-right-most cell of the grid.
 // It can only move rightwards or downwards (no diagonal movement) and do so one cell at a time.
 // The rabbit cannot move to a cell that has snakes.
-// In this program the different paths will be counted with K number of cells have snakes.
+// In this program the different paths will be counted with K snakes.
 
-#include<iostream>
 #include<utility> // for std::pair
 #include<cassert> // for assert
 
@@ -86,14 +85,15 @@ int countAllPathsByStride(Position* snakes, int num_snakes, int major_order, int
 // Synopsis
 //     traverse the matrix to calculate the number of paths according to the min(rows, columns)
 int countAllPaths(Position* snakes, int num_snakes, int rows, int columns) {
+    assert(((snakes != nullptr) && (num_snakes != 0)) || ((snakes == nullptr) && (num_snakes == 0)));
     assert(isSnake(snakes, num_snakes, 0, 0) == FLATLAND);
     assert(isSnake(snakes, num_snakes, rows - 1, columns - 1) == FLATLAND);
-    assert(((snakes != nullptr) && (num_snakes != 0)) || ((snakes == nullptr) && (num_snakes == 0)));
 
     int major_order = rows;
     int minor_order = columns;
 
-    if(rows > columns) { // column major default, for row major case, transpose the matrix to avoid duplicate code
+    // column major default, for row major case, transpose the matrix to avoid duplicate code
+    if(rows > columns) {
         for(int i = 0; i < num_snakes; i++) {
             Position tmp;
             tmp.swap(snakes[i]);
@@ -184,12 +184,12 @@ void testNumPathOfRectMatrix2() {
 }
 
 int main() {
-    testZeroPath1();
-    testZeroPath2();
-    testZeroPath3();
-    testOnePath();
-    testFullPath();
-    testNumPathOfRectMatrix1();
-    testNumPathOfRectMatrix2();
+    testZeroPath1(); // 0 path expected
+    testZeroPath2(); // 0 path expected
+    testZeroPath3(); // 0 path expected
+    testOnePath();   // 1 path expected
+    testFullPath();  // 6 path expected
+    testNumPathOfRectMatrix1(); // 1 path expected
+    testNumPathOfRectMatrix2(); // 1 path expected
     return 0;
 }
