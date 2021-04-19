@@ -10,9 +10,33 @@
 #include<cassert> // for assert
 
 typedef std::pair<int, int> Position;
+enum CELLFLAG {
+    SNAKE,
+    FLATLAND
+};
 
 // Input
-//     snakes      : the pointer which points to the Position of snakes
+//     snakes      : the pointer which points to the Position of snakes, this Position starts from 0
+//     num_snakes  : the number of snakes
+//     first       : position's first
+//     second      : position's second
+// Output
+//     Position(first, second) has snake or not
+// Synopsis
+//     traverse the snake array to determine the position(first, second) has snake or not
+inline CELLFLAG isSnake(Position* snakes, int num_snakes, int first, int second) {
+    if(snakes == nullptr) return FLATLAND;
+    
+    for(int k = 0; k < num_snakes; k++) {
+        if((snakes[k].first == first) && (snakes[k].second == second)) {
+            return SNAKE;
+        }
+    }
+    return FLATLAND;
+}
+
+// Input
+//     snakes      : the pointer which points to the Position of snakes, this Position starts from 0
 //     num_snakes  : the number of snakes
 //     major_order : min(rows, columns)
 //     minor_order : max(rows, columns)
@@ -20,54 +44,36 @@ typedef std::pair<int, int> Position;
 //     the number of different paths from top-left-most cell to the bottom-right-most cell of the grid
 // Synopsis
 //     The total number of different paths is counted by iterative calculation
-int countAllPathsBySteps(Position* snakes, int num_snakes, int major_order, int minor_order) {
-    int num_paths[major_order];      // store the intermediate result
-    int num_paths_next[major_order]; // store the final result
-    
-    for(int i = 0; i < major_order; i++) { // initialization
-        num_paths[i] = 1;
-        num_paths_next[i] = 1;
-    }
-    
-    for(int i = 0; i < major_order; i++) { // process the first line
-        for(int k = 0; k < num_snakes; k++) {
-            if((snakes[k].first == i) && (snakes[k].second == 0)) {
-				num_paths[i] = 0;
-                break;
-            }
+int countAllPathsByStride(Position* snakes, int num_snakes, int major_order, int minor_order) {
+    int num_paths[major_order]; // store the intermediate result
+
+    num_paths[0] = 1;
+    for(int i = 1; i < major_order; i++) { // process the first stride
+        if((num_paths[i - 1] == 1) && (isSnake(snakes, num_snakes, i, 0) == FLATLAND)) {
+            num_paths[i] = 1;
         }
     }
-    
+
     for(int j = 1; j < minor_order; j++) {
-        for(int k = 0; k < num_snakes; k++) { // if there are snakes in current line set it to 0
-            if(snakes[k].second == j) {
-                num_paths_next[snakes[k].first] = 0;
+        // process the first cell
+        if((num_paths[0] == 1) && (isSnake(snakes, num_snakes, 0, j) == FLATLAND)) {
+            num_paths[0] = 1;
+        }
+        else {
+            num_paths[0] = 0;
+        }
+        
+        for(int i = 1; i < major_order; i++) {
+            if(isSnake(snakes, num_snakes, i, j) == FLATLAND) {
+                num_paths[i] += num_paths[i - 1];
             }
-        }
-        
-        if(num_paths_next[0] != 0) {
-            num_paths_next[0] = num_paths[0];
-        }
-        
-        for(int i = 1; i < major_order; i++) { // update the number of path in current line
-            if(num_paths_next[i] != 0) {
-                num_paths_next[i] = num_paths_next[i - 1] + num_paths[i];
-            }
-        }
-        
-        for(int i = 1; i < major_order; i++) { // move the current line to the temporary array
-            num_paths[i] = num_paths_next[i];
-        }
-        
-        if(j < minor_order - 1) { // prepare for the next calculation
-            for(int i = 1; i < major_order; i++) {
-                num_paths_next[i] = 1;
+            else {
+                num_paths[i] = 0;
             }
         }
     }
-    
-    std::cout << "number of paths" << ": " << num_paths_next[major_order - 1] << std::endl;
-    return num_paths_next[major_order - 1];
+
+    return num_paths[major_order - 1];
 }
 
 // Input
@@ -80,10 +86,14 @@ int countAllPathsBySteps(Position* snakes, int num_snakes, int major_order, int 
 // Synopsis
 //     traverse the matrix to calculate the number of paths according to the min(rows, columns)
 int countAllPaths(Position* snakes, int num_snakes, int rows, int columns) {
+    assert(isSnake(snakes, num_snakes, 0, 0) == FLATLAND);
+    assert(isSnake(snakes, num_snakes, rows - 1, columns - 1) == FLATLAND);
+    assert(((snakes != nullptr) && (num_snakes != 0)) || ((snakes == nullptr) && (num_snakes == 0)));
+
     int major_order = rows;
     int minor_order = columns;
-    
-    if(rows >= columns) { // for square matrix(rows == columns), traverse by column
+
+    if(rows > columns) { // column major default, for row major case, transpose the matrix to avoid duplicate code
         for(int i = 0; i < num_snakes; i++) {
             Position tmp;
             tmp.swap(snakes[i]);
@@ -93,21 +103,93 @@ int countAllPaths(Position* snakes, int num_snakes, int rows, int columns) {
         major_order = columns;
         minor_order = rows;
     }
-	
-    return countAllPathsBySteps(snakes, num_snakes, major_order, minor_order);
+
+    return countAllPathsByStride(snakes, num_snakes, major_order, minor_order);
+}
+
+// This case will cover the 3*3 matrix with 3 snake
+void testZeroPath1() {
+    constexpr int K = 3;
+    Position snakes[K] = { Position(0, 2), Position(1, 1), Position(2, 0) };
+    constexpr int rows = 3;
+    constexpr int columns = 3;
+    constexpr int result = 0;
+
+    assert(countAllPaths(snakes, K, rows, columns) == result);
+}
+
+// This case will cover the 3*3 matrix with 2 snake
+void testZeroPath2() {
+    constexpr int K = 2;
+    Position snakes[K] = { Position(0, 1), Position(1, 0) };
+    constexpr int rows = 3;
+    constexpr int columns = 3;
+    constexpr int result = 0;
+
+    assert(countAllPaths(snakes, K, rows, columns) == result);
+}
+
+// This case will cover the 3*3 matrix with 2 snake
+void testZeroPath3() {
+    constexpr int K = 2;
+    Position snakes[K] = { Position(1, 2), Position(2, 1) };
+    constexpr int rows = 3;
+    constexpr int columns = 3;
+    constexpr int result = 0;
+
+    assert(countAllPaths(snakes, K, rows, columns) == result);
+}
+
+// This case will cover the 3*3 matrix with 2 snake
+void testOnePath() {
+    constexpr int K = 2;
+    Position snakes[K] = { Position(2, 0), Position(1, 1) };
+    constexpr int rows = 3;
+    constexpr int columns = 3;
+    constexpr int result = 1;
+
+    assert(countAllPaths(snakes, K, rows, columns) == result);
+}
+
+// This case will cover the 3*3 matrix without snake
+void testFullPath() {
+    constexpr int K = 0;
+    constexpr int rows = 3;
+    constexpr int columns = 3;
+    constexpr int result = 6;
+
+    assert(countAllPaths(nullptr, K, rows, columns) == result);
 }
 
 // This case will cover the 2*3 matrix with 1 snake
-void testNumPathOfRectMatrix() {
+void testNumPathOfRectMatrix1() {
     constexpr int K = 1;
     Position snakes[K] = { Position(1,1) };
     constexpr int rows = 2;
     constexpr int columns = 3;
     constexpr int result = 1;
+
+    assert(countAllPaths(snakes, K, rows, columns) == result);
+}
+
+// This case will cover the 3*2 matrix with 1 snake
+void testNumPathOfRectMatrix2() {
+    constexpr int K = 1;
+    Position snakes[K] = { Position(1,1) };
+    constexpr int rows = 3;
+    constexpr int columns = 2;
+    constexpr int result = 1;
+
     assert(countAllPaths(snakes, K, rows, columns) == result);
 }
 
 int main() {
-    testNumPathOfRectMatrix();
+    testZeroPath1();
+    testZeroPath2();
+    testZeroPath3();
+    testOnePath();
+    testFullPath();
+    testNumPathOfRectMatrix1();
+    testNumPathOfRectMatrix2();
     return 0;
 }
