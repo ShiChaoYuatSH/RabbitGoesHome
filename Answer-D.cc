@@ -1,5 +1,12 @@
-#include<cassert>
-#include<iostream>
+// A rabbit is in the top-left-most cell of a M x N grid. The grid width is M-cell and the height is N-cell. 
+// Some cells have snakes and other cells don’t. The rabbit wants to go home,
+// which is located at the bottom-right-most cell of the grid.
+// It can only move rightwards or downwards (no diagonal movement) and do so one cell at a time.
+// The rabbit cannot move to a cell that has snakes.
+// In this program the different paths will be printed.
+
+#include<cassert>  // for assert
+#include<iostream> // for cout
 
 enum CELLFLAG {
     SNAKE,
