@@ -23,11 +23,22 @@ struct Cell {
     char adj; // bit 0 for rightwards and bit 1 for downwards; 1 represents forward available and 0 for blocked
 };
 
-// reset the status of the cell which is in cellIndex
-void resetCellAdj(CELLFLAG* grid, Cell* paths, int cellIndex, int rows, int columns) {
-    const int dstCell = rows * columns - 1;
+constexpr int STEP = 1;
+
+// Input
+//     grid      : the pointer which points to the matrix by row major order
+//     paths     : the pointer which points to the array which store the nodes in the path
+//     cellIndex : the cell to be reset
+//     rows      : the number of matrix rows
+//     columns   : the number of matrix columns
+// Output
+//     available towards of paths[cellIndex].adj
+// Synopsis
+//     reset the avaliable towards(rightwards & downwards) of the cell which is in cellIndex
+inline void resetCellAdj(CELLFLAG* grid, Cell* paths, int cellIndex, int rows, int columns) {
+    const int dstCell = rows * columns - STEP;
     paths[cellIndex].adj = 0;
-    int rightwards = paths[cellIndex].pos + 1;
+    int rightwards = paths[cellIndex].pos + STEP;
     int downwards = paths[cellIndex].pos + columns;
     if(((rightwards % columns) != 0) && (rightwards <= dstCell) && (grid[rightwards] != SNAKE)) { // rightwards available
         paths[cellIndex].adj |= 0x01;
@@ -38,7 +49,16 @@ void resetCellAdj(CELLFLAG* grid, Cell* paths, int cellIndex, int rows, int colu
     }
 }
 
-int printAllPaths(const char* funcName, CELLFLAG* grid, int rows, int columns) {
+// Input
+//     gridName  : the name of grid
+//     grid      : the pointer which points to the matrix by row major order
+//     rows      : the number of matrix rows
+//     columns   : the number of matrix columns
+// Output
+//     number of correct paths
+// Synopsis
+//     print all paths from top-left-most cell to the bottom-right-most cell which move rightwards or downwards (no diagonal movement) and do so one cell at a time
+int printAllPaths(const char* gridName, CELLFLAG* grid, int rows, int columns) {
     constexpr int EMPTYSTACK = -1;
     int numPaths = 0;
     const int dstCell = rows * columns - 1;
@@ -63,43 +83,43 @@ int printAllPaths(const char* funcName, CELLFLAG* grid, int rows, int columns) {
     resetCellAdj(grid, paths, 0, rows, columns);
 
     while(curStep >= 0) { // until stack empty
-        int rightwards = paths[curStep].pos + 1;
-        int downwards  = paths[curStep].pos + columns;
-        if(((rightwards % columns) != 0) && (rightwards <= dstCell) && (grid[rightwards] != SNAKE) && (vis[rightwards] == UNVISITED) && ((paths[curStep].adj & 0x01) == 1)) {
-            paths[curStep].adj &= 0xFE;
-            vis[paths[curStep].pos] = VISITED;
-            // push rightwards cell into stack at curStep
-            curStep++;
-            paths[curStep].pos = rightwards;
-            resetCellAdj(grid, paths, curStep, rows, columns);
-        }
-        else if((downwards <= dstCell) && (grid[downwards] != SNAKE) && (vis[downwards] == UNVISITED) && ((paths[curStep].adj & 0x02) != 0)) {
-            paths[curStep].adj &= 0xFD;
-            vis[paths[curStep].pos] = VISITED;
-            // push downwards cell into stack at curStep
-            curStep++;
-            paths[curStep].pos = downwards;
-            resetCellAdj(grid, paths, curStep, rows, columns);
-        }
-        else if((paths[curStep].pos == dstCell)) { // print path
+		const int curPos = paths[curStep].pos;
+        const int rightwards = curPos + STEP;
+        const int downwards  = curPos + columns;
+        if((curPos == dstCell)) { // print path
             if((++numPaths) == 1) {
-                std::cout << "paths of function " << funcName << ": " << std::endl;
+                std::cout << "paths of function " << gridName << ": " << std::endl;
             }
             for(int i = 0; i < curStep; i++) {
                 std::cout << paths[i].pos << " -> ";
             }
             std::cout << paths[curStep].pos << std::endl;
-            vis[paths[curStep].pos] = UNVISITED;
+            vis[curPos] = UNVISITED;
             resetCellAdj(grid, paths, curStep, rows, columns);
             curStep--; // pop from stack
         }
-        else if(((paths[curStep].adj & 0x01) == 0) && ((paths[curStep].adj & 0x02) == 0)){
-            vis[paths[curStep].pos] = UNVISITED;
+		// move rightwards
+        else if(((rightwards % columns) != 0) && (rightwards <= dstCell) && (grid[rightwards] != SNAKE) && (vis[rightwards] == UNVISITED) && ((paths[curStep].adj & 0x01) == 1)) {
+            paths[curStep].adj &= 0xFE;
+            vis[curPos] = VISITED;
+            // push rightwards cell into stack at curStep
+            curStep++;
+            paths[curStep].pos = rightwards;
+            resetCellAdj(grid, paths, curStep, rows, columns);
+        }
+		// move downwards
+        else if((downwards <= dstCell) && (grid[downwards] != SNAKE) && (vis[downwards] == UNVISITED) && ((paths[curStep].adj & 0x02) != 0)) {
+            paths[curStep].adj &= 0xFD;
+            vis[curPos] = VISITED;
+            // push downwards cell into stack at curStep
+            curStep++;
+            paths[curStep].pos = downwards;
+            resetCellAdj(grid, paths, curStep, rows, columns);
+        }
+        else { // blocked, backtrack
+            vis[curPos] = UNVISITED;
             resetCellAdj(grid, paths, curStep, rows, columns);
             curStep--; // pop from stack
-        }
-        else {
-            assert(false);
         }
     }
     
