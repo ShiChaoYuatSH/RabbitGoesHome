@@ -1,3 +1,10 @@
+// A rabbit is in the top-left-most cell of a M x N grid. The grid width is M-cell and the height is N-cell. 
+// Some cells have snakes and other cells don’t. The rabbit wants to go home,
+// which is located at the bottom-right-most cell of the grid.
+// It can only move up/down/left/right, but cannot revisit a cell it has already visited, and do so one cell at a time.
+// The rabbit cannot move to a cell that has snakes.
+// In this program the different paths will be printed.
+
 #include<cassert>
 #include<iostream>
 
@@ -17,16 +24,24 @@ struct Cell {
     char adj;
 };
 
-
-
-// reset the status of the cell which is in cellIndex
-void resetCellAdj(CELLFLAG* grid, Cell* paths, int cellIndex, int rows, int columns) {
+// Input
+//     grid      : the pointer which points to the matrix by row major order
+//     paths     : the pointer which points to the array which store the nodes in the path
+//     cellIndex : the cell to be reset
+//     rows      : the number of matrix rows
+//     columns   : the number of matrix columns
+// Output
+//     available towards of paths[cellIndex].adj
+// Synopsis
+//     reset the avaliable towards(rightwards & downwards & leftwards & upwards) of the cell which is in cellIndex
+inline void resetCellAdj(CELLFLAG* grid, Cell* paths, int cellIndex, int rows, int columns) {
     const int dstCell = rows * columns - 1;
     paths[cellIndex].adj = 0;
-    int rightwards = paths[cellIndex].pos + 1;
-    int downwards = paths[cellIndex].pos + columns;
-	int leftwards = paths[cellIndex].pos - 1;
-    int upwards = paths[cellIndex].pos + columns;
+	const int curPos = paths[cellIndex].pos;
+    int rightwards = curPos + 1;
+    int downwards = curPos + columns;
+	int leftwards = curPos - 1;
+    int upwards = curPos - columns;
 	
     if(((rightwards % columns) != 0) && (rightwards <= dstCell) && (grid[rightwards] != SNAKE)) { // rightwards available
         paths[cellIndex].adj |= 0x01;
@@ -35,9 +50,26 @@ void resetCellAdj(CELLFLAG* grid, Cell* paths, int cellIndex, int rows, int colu
     if((downwards <= dstCell) && (grid[downwards] != SNAKE)) { // downwards available
         paths[cellIndex].adj |= 0x02;
     }
+	
+	if(((curPos % columns) != 0) && (leftwards >= 0) && (grid[leftwards] != SNAKE)) { // leftwards available
+		paths[cellIndex].adj |= 0x04;
+	}
+	
+	if((upwards >= 0) && (grid[upwards] != SNAKE)) { // upwards available
+		paths[cellIndex].adj |= 0x08;
+	}
 }
 
-int printAllPaths(const char* funcName, CELLFLAG* grid, int rows, int columns) {
+// Input
+//     gridName  : the name of grid
+//     grid      : the pointer which points to the matrix by row major order
+//     rows      : the number of matrix rows
+//     columns   : the number of matrix columns
+// Output
+//     number of correct paths
+// Synopsis
+//     print all paths from top-left-most cell to the bottom-right-most cell which move up/down/left/right, but cannot revisit a cell it has already visited, and do so one cell at a time
+int printAllPaths(const char* gridName, CELLFLAG* grid, int rows, int columns) {
     constexpr int EMPTYSTACK = -1;
     int numPaths = 0;
     const int dstCell = rows * columns - 1;
@@ -62,43 +94,63 @@ int printAllPaths(const char* funcName, CELLFLAG* grid, int rows, int columns) {
     resetCellAdj(grid, paths, 0, rows, columns);
 
     while(curStep >= 0) { // until stack empty
-        int rightwards = paths[curStep].pos + 1;
-        int downwards  = paths[curStep].pos + columns;
-        if(((rightwards % columns) != 0) && (rightwards <= dstCell) && (grid[rightwards] != SNAKE) && (vis[rightwards] == UNVISITED) && ((paths[curStep].adj & 0x01) == 1)) {
-            paths[curStep].adj &= 0xFE;
-            vis[paths[curStep].pos] = VISITED;
-            // push rightwards cell into stack at curStep
-            curStep++;
-            paths[curStep].pos = rightwards;
-            resetCellAdj(grid, paths, curStep, rows, columns);
-        }
-        else if((downwards <= dstCell) && (grid[downwards] != SNAKE) && (vis[downwards] == UNVISITED) && ((paths[curStep].adj & 0x02) != 0)) {
-            paths[curStep].adj &= 0xFD;
-            vis[paths[curStep].pos] = VISITED;
-            // push downwards cell into stack at curStep
-            curStep++;
-            paths[curStep].pos = downwards;
-            resetCellAdj(grid, paths, curStep, rows, columns);
-        }
-        else if((paths[curStep].pos == dstCell)) { // print path
+		const int curPos     = paths[curStep].pos;
+        const int rightwards = curPos + 1;
+        const int downwards  = curPos + columns;
+        const int leftwards  = curPos - 1;
+        const int upwards    = curPos - columns;
+        if((curPos == dstCell)) { // print path
             if((++numPaths) == 1) {
-                std::cout << "paths of function " << funcName << ": " << std::endl;
+                std::cout << "paths of function " << gridName << ": " << std::endl;
             }
             for(int i = 0; i < curStep; i++) {
                 std::cout << paths[i].pos << " -> ";
             }
             std::cout << paths[curStep].pos << std::endl;
-            vis[paths[curStep].pos] = UNVISITED;
+            vis[curPos] = UNVISITED;
             resetCellAdj(grid, paths, curStep, rows, columns);
             curStep--; // pop from stack
         }
-        else if(((paths[curStep].adj & 0x01) == 0) && ((paths[curStep].adj & 0x02) == 0)){
-            vis[paths[curStep].pos] = UNVISITED;
+		// move rightwards
+        else if(((rightwards % columns) != 0) && (rightwards <= dstCell) && (grid[rightwards] != SNAKE) && (vis[rightwards] == UNVISITED) && ((paths[curStep].adj & 0x01) == 1)) {
+            paths[curStep].adj &= 0xFE;
+            vis[curPos] = VISITED;
+            // push rightwards cell into stack at curStep
+            curStep++;
+            paths[curStep].pos = rightwards;
+            resetCellAdj(grid, paths, curStep, rows, columns);
+        }
+		// move downwards
+        else if((downwards <= dstCell) && (grid[downwards] != SNAKE) && (vis[downwards] == UNVISITED) && ((paths[curStep].adj & 0x02) != 0)) {
+            paths[curStep].adj &= 0xFD;
+            vis[curPos] = VISITED;
+            // push downwards cell into stack at curStep
+            curStep++;
+            paths[curStep].pos = downwards;
+            resetCellAdj(grid, paths, curStep, rows, columns);
+        }
+		// move leftwards
+        else if(((curPos % columns) != 0) && (leftwards <= dstCell) && (grid[leftwards] != SNAKE) && (vis[leftwards] == UNVISITED) && ((paths[curStep].adj & 0x04) != 0)) {
+            paths[curStep].adj &= 0xFB;
+            vis[curPos] = VISITED;
+            // push leftwards cell into stack at curStep
+            curStep++;
+            paths[curStep].pos = leftwards;
+            resetCellAdj(grid, paths, curStep, rows, columns);
+        }
+		// move upwards
+        else if((upwards <= dstCell) && (grid[upwards] != SNAKE) && (vis[upwards] == UNVISITED) && ((paths[curStep].adj & 0x08) != 0)) {
+            paths[curStep].adj &= 0xF7;
+            vis[curPos] = VISITED;
+            // push upwards cell into stack at curStep
+            curStep++;
+            paths[curStep].pos = upwards;
+            resetCellAdj(grid, paths, curStep, rows, columns);
+        }
+        else { // blocked, backtrack
+            vis[curPos] = UNVISITED;
             resetCellAdj(grid, paths, curStep, rows, columns);
             curStep--; // pop from stack
-        }
-        else {
-            assert(false);
         }
     }
     
@@ -109,70 +161,70 @@ int printAllPaths(const char* funcName, CELLFLAG* grid, int rows, int columns) {
 void testZeroPath1() {
     constexpr int rows = 3;
     constexpr int cols = 3;
-    constexpr int result = 0;
 
     CELLFLAG grid[rows][cols] = { {FLATLAND, FLATLAND, SNAKE}, {FLATLAND, SNAKE, FLATLAND}, {SNAKE, FLATLAND, FLATLAND} };
-    assert(printAllPaths(__FUNCTION__, *grid, rows, cols) == result);
+	int numPaths = printAllPaths(__FUNCTION__, *grid, rows, cols);
+    std::cout << "test case " << __FUNCTION__ << " total path number: " << numPaths << std::endl;
 }
 
 // This case will cover the 3*3 matrix with 2 snakes
 void testZeroPath2() {
     constexpr int rows = 3;
     constexpr int cols = 3;
-    constexpr int result = 0;
 
     CELLFLAG grid[rows][cols] = { {FLATLAND, SNAKE, FLATLAND}, {SNAKE, FLATLAND, FLATLAND}, {FLATLAND, FLATLAND, FLATLAND} };
-    assert(printAllPaths(__FUNCTION__, *grid, rows, cols) == result);
+	int numPaths = printAllPaths(__FUNCTION__, *grid, rows, cols);
+    std::cout << "test case " << __FUNCTION__ << " total path number: " << numPaths << std::endl;
 }
 
 // This case will cover the 3*3 matrix with 2 snakes
 void testZeroPath3() {
     constexpr int rows = 3;
     constexpr int cols = 3;
-    constexpr int result = 0;
 
     CELLFLAG grid[rows][cols] = { {FLATLAND, FLATLAND, FLATLAND}, {FLATLAND, FLATLAND, SNAKE}, {FLATLAND, SNAKE, FLATLAND} };
-    assert(printAllPaths(__FUNCTION__, *grid, rows, cols) == result);
+	int numPaths = printAllPaths(__FUNCTION__, *grid, rows, cols);
+    std::cout << "test case " << __FUNCTION__ << " total path number: " << numPaths << std::endl;
 }
 
 // This case will cover the 3*3 matrix with 2 snakes
 void testOnePath() {
     constexpr int rows = 3;
     constexpr int cols = 3;
-    constexpr int result = 1;
 
     CELLFLAG grid[rows][cols] = { {FLATLAND, FLATLAND, FLATLAND}, {FLATLAND, SNAKE, FLATLAND}, {SNAKE, FLATLAND, FLATLAND} };
-    assert(printAllPaths(__FUNCTION__, *grid, rows, cols) == result);
+	int numPaths = printAllPaths(__FUNCTION__, *grid, rows, cols);
+    std::cout << "test case " << __FUNCTION__ << " total path number: " << numPaths << std::endl;
 }
 
 // This case will cover the 3*3 matrix without snakes
 void testFullPath() {
     constexpr int rows = 3;
     constexpr int cols = 3;
-    constexpr int result = 6;
 
     CELLFLAG grid[rows][cols] = { {FLATLAND, FLATLAND, FLATLAND}, {FLATLAND, FLATLAND, FLATLAND}, {FLATLAND, FLATLAND, FLATLAND} };
-    assert(printAllPaths(__FUNCTION__, *grid, rows, cols) == result);
+	int numPaths = printAllPaths(__FUNCTION__, *grid, rows, cols);
+    std::cout << "test case " << __FUNCTION__ << " total path number: " << numPaths << std::endl;
 }
 
 // This case will cover the 2*3 matrix with 1 snake
 void testNumPathOfRectMatrix1() {
     constexpr int rows = 2;
     constexpr int cols = 3;
-    constexpr int result = 1;
 
     CELLFLAG grid[rows][cols] = { {FLATLAND, FLATLAND, FLATLAND}, {FLATLAND, SNAKE, FLATLAND} };
-    assert(printAllPaths(__FUNCTION__, *grid, rows, cols) == result);
+	int numPaths = printAllPaths(__FUNCTION__, *grid, rows, cols);
+    std::cout << "test case " << __FUNCTION__ << " total path number: " << numPaths << std::endl;
 }
 
 // This case will cover the 3*2 matrix with 1 snake
 void testNumPathOfRectMatrix2() {
     constexpr int rows = 3;
     constexpr int cols = 2;
-    constexpr int result = 1;
 
     CELLFLAG grid[rows][cols] = { {FLATLAND, FLATLAND}, {SNAKE, FLATLAND}, {FLATLAND, FLATLAND} };
-    assert(printAllPaths(__FUNCTION__, *grid, rows, cols) == result);
+	int numPaths = printAllPaths(__FUNCTION__, *grid, rows, cols);
+    std::cout << "test case " << __FUNCTION__ << " total path number: " << numPaths << std::endl;
 }
 
 int main() {
